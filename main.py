@@ -5,7 +5,7 @@ import seaborn as sns
 import pandas as pd
 
 spark = SparkSession.builder \
-    .appName("PySpark Hadoop Example") \
+    .appName("Projet Hadoop") \
     .config("spark.hadoop.fs.defaultFS", "hdfs://localhost:9000") \
     .getOrCreate()
 
@@ -13,63 +13,26 @@ df = spark.read.csv("hdfs://localhost:9000/data.csv", header=True, inferSchema=T
 
 print("describe:")
 df.describe().show()
-print("Types de données avant le nettoyage:")
+print("Types de données:")
 df.printSchema()
 
 df.show(5)
 
-print("Types de données après la transformation:")
-df.printSchema()
+df.createOrReplaceTempView("data_view")
 
-print("Valeurs uniques pour RecruitmentStrategy:")
-df.select('RecruitmentStrategy').distinct().show()
+interview_score_avg = spark.sql("SELECT HiringDecision, AVG(InterviewScore) AS AvgInterviewScore FROM data_view GROUP BY HiringDecision").toPandas()
+skill_score_avg = spark.sql("SELECT HiringDecision, AVG(SkillScore) AS AvgSkillScore FROM data_view GROUP BY HiringDecision").toPandas()
+personality_score_avg = spark.sql("SELECT HiringDecision, AVG(PersonalityScore) AS AvgPersonalityScore FROM data_view GROUP BY HiringDecision").toPandas()
+age_avg = spark.sql("SELECT HiringDecision, AVG(Age) AS AvgAge FROM data_view GROUP BY HiringDecision").toPandas()
+experience_years_avg = spark.sql("SELECT HiringDecision, AVG(ExperienceYears) AS AvgExperienceYears FROM data_view GROUP BY HiringDecision").toPandas()
+education_count = spark.sql("SELECT EducationLevel, HiringDecision, COUNT(*) AS Count FROM data_view GROUP BY EducationLevel, HiringDecision").toPandas()
+gender_count = spark.sql("SELECT Gender, HiringDecision, COUNT(*) AS Count FROM data_view GROUP BY Gender, HiringDecision").toPandas()
+distance_avg = spark.sql("SELECT HiringDecision, AVG(ROUND(DistanceFromCompany, 2)) AS AvgDistance FROM data_view GROUP BY HiringDecision").toPandas()
+strategy_count = spark.sql("SELECT RecruitmentStrategy, HiringDecision, COUNT(*) AS Count FROM data_view GROUP BY RecruitmentStrategy, HiringDecision").toPandas()
+previous_companies_avg = spark.sql("SELECT HiringDecision, AVG(PreviousCompanies) AS AvgPreviousCompanies FROM data_view GROUP BY HiringDecision").toPandas()
 
-print("Valeurs uniques pour HiringDecision:")
-df.select('HiringDecision').distinct().show()
-
-print("Valeurs uniques pour Gender:")
-df.select('Gender').distinct().show()
-
-df_pd = df.toPandas()
-
-def plot_pie_chart(data, column, ax):
-    counts = data[column].value_counts()
-    counts.plot.pie(ax=ax, autopct='%1.1f%%', startangle=90)
-    ax.set_title(f'Distribution de {column}')
-    ax.axis('equal')
-
-fig, axes = plt.subplots(2, 3, figsize=(18, 10))
-
-plot_pie_chart(df_pd, 'RecruitmentStrategy', axes[0, 0])
-plot_pie_chart(df_pd, 'HiringDecision', axes[0, 1])
-plot_pie_chart(df_pd, 'Gender', axes[0, 2])
-plot_pie_chart(df_pd, 'EducationLevel', axes[1, 0])
-plot_pie_chart(df_pd, 'ExperienceYears', axes[1, 1])
-plot_pie_chart(df_pd, 'PreviousCompanies', axes[1, 2])
-
-plt.suptitle('Distribution des types de données par colonne')
-plt.tight_layout()
-plt.show()
-
-interview_score_avg = df.groupBy('HiringDecision').agg(avg('InterviewScore').alias('AvgInterviewScore')).toPandas()
-
-skill_score_avg = df.groupBy('HiringDecision').agg(avg('SkillScore').alias('AvgSkillScore')).toPandas()
-
-personality_score_avg = df.groupBy('HiringDecision').agg(avg('PersonalityScore').alias('AvgPersonalityScore')).toPandas()
-
-age_avg = df.groupBy('HiringDecision').agg(avg('Age').alias('AvgAge')).toPandas()
-
-experience_years_avg = df.groupBy('HiringDecision').agg(avg('ExperienceYears').alias('AvgExperienceYears')).toPandas()
-
-education_count = df.groupBy('EducationLevel', 'HiringDecision').agg(count('*').alias('Count')).toPandas()
-
-gender_count = df.groupBy('Gender', 'HiringDecision').agg(count('*').alias('Count')).toPandas()
-
-distance_avg = df.groupBy('HiringDecision').agg(round(avg('DistanceFromCompany'), 2).alias('AvgDistance')).toPandas()
-
-strategy_count = df.groupBy('RecruitmentStrategy', 'HiringDecision').agg(count('*').alias('Count')).toPandas()
-
-previous_companies_avg = df.groupBy('HiringDecision').agg(avg('PreviousCompanies').alias('AvgPreviousCompanies')).toPandas()
+gender_decision_count_sql = spark.sql("SELECT Gender, HiringDecision, COUNT(*) AS Count FROM data_view GROUP BY Gender, HiringDecision").toPandas()
+gender_decision_count = gender_decision_count_sql.pivot(index='Gender', columns='HiringDecision', values='Count')
 
 def add_annotations(ax, data, x, y, fmt='.2f'):
     for p in ax.patches:
@@ -138,7 +101,6 @@ plt.grid(True)
 plt.show()
 
 fig, axes = plt.subplots(1, 2, figsize=(14, 7))
-gender_decision_count = df_pd.groupby(['Gender', 'HiringDecision']).size().unstack()
 gender_decision_count[0].plot.pie(ax=axes[0], autopct='%1.1f%%', startangle=90, title='Répartition des refusés par genre')
 gender_decision_count[1].plot.pie(ax=axes[1], autopct='%1.1f%%', startangle=90, title='Répartition des acceptés par genre')
 axes[0].legend(labels=['Homme (0)', 'Femme (1)'], loc="best")
@@ -160,7 +122,7 @@ plt.grid(True)
 plt.show()
 
 plt.figure(figsize=(10, 6))
-ax = sns.boxplot(x='HiringDecision', y='DistanceFromCompany', data=df_pd, palette='viridis')
+ax = sns.boxplot(x='HiringDecision', y='DistanceFromCompany', data=df.toPandas(), palette='viridis')
 plt.title('Moyenne des distances par décision de recrutement')
 plt.xlabel('Décision de recrutement (0 = Refusé, 1 = Accepté)')
 plt.ylabel('Distance de la compagnie (km)')
@@ -176,9 +138,8 @@ add_annotations(ax, previous_companies_avg, 'HiringDecision', 'AvgPreviousCompan
 plt.grid(True)
 plt.show()
 
-
 plt.figure(figsize=(14, 10))
-correlation_matrix = df_pd.corr()
+correlation_matrix = df.toPandas().corr()
 sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', linewidths=0.5)
 plt.title('Heatmap de corrélation entre toutes les variables')
 plt.show()
