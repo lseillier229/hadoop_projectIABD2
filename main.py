@@ -11,8 +11,8 @@ spark = SparkSession.builder \
 
 df = spark.read.csv("hdfs://localhost:9000/data.csv", header=True, inferSchema=True)
 
-
-
+print("describe:")
+df.describe().show()
 print("Types de données avant le nettoyage:")
 df.printSchema()
 
@@ -126,10 +126,13 @@ plt.show()
 
 plt.figure(figsize=(10, 6))
 ax = sns.barplot(x='EducationLevel', y='Count', hue='HiringDecision', data=education_count, palette='viridis')
-plt.title('Nombre de candidats par niveau d\'éducation et décision de recrutement')
-plt.xlabel('Niveau d\'éducation')
+plt.title('Nombre de candidats par niveau d\'éducation en fonction de la décision de recrutement')
+plt.xlabel('Niveau d\'éducation (1 = Licence (Type 1), 2 = Licence (Type 2), 3 = Master, 4 = Doctorat)')
 plt.ylabel('Nombre de candidats')
-plt.legend(title='Décision de recrutement', labels=['Refusé (0)', 'Accepté (1)'])
+handles, labels = ax.get_legend_handles_labels()
+labels = ['Refusé (0)', 'Accepté (1)']
+ax.legend(handles=handles, title='Décision de recrutement', labels=labels)
+
 add_annotations(ax, education_count, 'EducationLevel', 'Count')
 plt.grid(True)
 plt.show()
@@ -146,10 +149,12 @@ plt.show()
 
 plt.figure(figsize=(10, 6))
 ax = sns.barplot(x='RecruitmentStrategy', y='Count', hue='HiringDecision', data=strategy_count, palette='viridis')
-plt.title('Nombre de candidats par stratégie de recrutement et décision de recrutement')
-plt.xlabel('Stratégie de recrutement')
+plt.title('Nombre de candidats par stratégie de recrutement en fonction de la décision de recrutement')
+plt.xlabel('Stratégie de recrutement (1 = Agressive, 2 = Modérée, 3 = Prudente)')
 plt.ylabel('Nombre de candidats')
-plt.legend(title='Décision de recrutement', labels=['Refusé (0)', 'Accepté (1)'])
+handles, labels = ax.get_legend_handles_labels()
+labels = ['Refusé (0)', 'Accepté (1)']
+ax.legend(handles=handles, title='Décision de recrutement', labels=labels)
 add_annotations(ax, strategy_count, 'RecruitmentStrategy', 'Count')
 plt.grid(True)
 plt.show()
@@ -158,7 +163,7 @@ plt.figure(figsize=(10, 6))
 ax = sns.boxplot(x='HiringDecision', y='DistanceFromCompany', data=df_pd, palette='viridis')
 plt.title('Moyenne des distances par décision de recrutement')
 plt.xlabel('Décision de recrutement (0 = Refusé, 1 = Accepté)')
-plt.ylabel('Distance de la compagnie (m)')
+plt.ylabel('Distance de la compagnie (km)')
 plt.grid(True)
 plt.show()
 
@@ -172,7 +177,7 @@ plt.grid(True)
 plt.show()
 
 
-plt.figure(figsize=(14, 11))
+plt.figure(figsize=(14, 10))
 correlation_matrix = df_pd.corr()
 sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', linewidths=0.5)
 plt.title('Heatmap de corrélation entre toutes les variables')
